@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  ANALYST
+  VIEWER
+}
+
+enum Severity {
+  low
+  medium
+  high
+  critical
+}
+
+enum ThreatStatus {
+  active
+  blocked
+  resolved
+  investigating
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         Role      @default(ANALYST)
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  alerts       Alert[]   @relation("AssignedAlerts")
+  sessions     Session[]
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("sessions")
+}
+
+model Threat {
+  id          String       @id
+  timestamp   DateTime     @default(now())
+  sourceIp    String
+  country     String
+  countryCode String
+  asn         String
+  attackType  String
+  endpoint    String
+  severity    Severity
+  status      ThreatStatus @default(active)
+  attempts    Int          @default(1)
+  userAgent   String       @default("")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  alerts      Alert[]
+  analyses    Analysis[]
+  logs        ThreatLog[]
+  @@index([severity])
+  @@index([status])
+  @@index([sourceIp])
+  @@index([timestamp])
+  @@map("threats")
+}
+
+model Alert {
+  id         String       @id @default(uuid())
+  threatId   String
+  name       String
+  assignedTo String?
+  status     ThreatStatus @default(active)
+  severity   Severity
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  threat     Threat       @relation(fields: [threatId], references: [id], onDelete: Cascade)
+  analyst    User?        @relation("AssignedAlerts", fields: [assignedTo], references: [id])
+  @@index([status])
+  @@index([severity])
+  @@map("alerts")
+}
+
+model Analysis {
+  id                String   @id @default(uuid())
+  threatId          String
+  explanation       String   @db.Text
+  severityReasoning String   @db.Text
+  mitigationSteps   Json
+  firewallRule      String   @db.Text
+  autoResolved      Boolean  @default(false)
+  confidence        Float
+  resolvedReason    String?  @db.Text
+  createdAt         DateTime @default(now())
+  threat            Threat   @relation(fields: [threatId], references: [id], onDelete: Cascade)
+  @@map("analyses")
+}
+
+model ThreatLog {
+  id        String   @id @default(uuid())
+  threatId  String
+  level     String
+  message   String   @db.Text
+  timestamp DateTime @default(now())
+  embedding Unsupported("vector(1024)")?
+  threat    Threat   @relation(fields: [threatId], references: [id], onDelete: Cascade)
+  @@index([threatId])
+  @@index([timestamp])
+  @@map("threat_logs")
+}

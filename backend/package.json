@@ -1,0 +1,53 @@
+{
+  "name": "@hawkeye/backend",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ingest": "vitest run tests/threatParser.unit.test.ts tests/ingest.integration.test.ts",
+    "ingest:replay": "tsx scripts/replayDummyLogs.ts",
+    "db:generate": "prisma generate --config prisma.config.ts",
+    "db:push": "prisma db push --config prisma.config.ts || npm run db:push:docker",
+    "db:push:docker": "docker run --rm --network hawkeye_default -v \"%cd%\":/app -w /tmp node:22-bookworm sh -lc \"npx prisma db push --schema /app/prisma/schema.prisma --url postgresql://hawkeye:hawkeye_password@postgres:5432/hawkeye_db\"",
+    "db:migrate": "prisma migrate dev --config prisma.config.ts",
+    "db:studio": "prisma studio --config prisma.config.ts",
+    "worker": "tsx src/workers/alertWorker.ts"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.7.0",
+    "@prisma/client": "^7.7.0",
+    "bcryptjs": "^2.4.3",
+    "bullmq": "^5.12.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "ioredis": "^5.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "pdfkit": "^0.18.0",
+    "pg": "^8.20.0",
+    "uuid": "^9.0.1",
+    "ws": "^8.17.1"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/node": "^20.19.39",
+    "@types/pdfkit": "^0.17.5",
+    "@types/supertest": "^6.0.3",
+    "@types/uuid": "^9.0.8",
+    "@types/ws": "^8.5.11",
+    "dotenv": "^16.6.1",
+    "prisma": "^7.7.0",
+    "supertest": "^7.1.1",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.3",
+    "vitest": "^2.1.8"
+  }
+}

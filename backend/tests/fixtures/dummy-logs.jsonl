@@ -1,0 +1,6 @@
+{"source":"nginx","method":"GET","path":"/api/users?id=1 union select password from users","status":403,"sourceIp":"44.55.66.77","ua":"curl/8.0","query":"id=1 union select password from users"}
+{"source":"nginx","method":"GET","path":"/health","status":200,"sourceIp":"10.0.0.2","ua":"kube-probe/1.31","message":"GET /health 200"}
+{"source":"cloudflare_waf","action":"block","rule":"cf-waf-xss-1001","attack":"xss","signature":"XSS script tag","sourceIp":"172.20.1.5","path":"/comment","message":"blocked payload <script>alert(1)</script>"}
+{"source":"auth","event":"login","outcome":"failure","reason":"invalid_password","username":"admin","sourceIp":"101.102.103.104","path":"/login","message":"Failed password for admin from 101.102.103.104 port 55212 ssh2"}
+{"source":"suricata_ids","signature":"ET SCAN Nmap Scripting Engine User-Agent Detected","category":"Attempted Information Leak","sourceIp":"203.0.113.9","path":"/network","message":"suricata alert nmap scan from 203.0.113.9 to 10.0.1.10"}
+{"source":"guardduty","findingType":"UnauthorizedAccess:IAMUser/ConsoleLogin","apiCall":"AssumeRole","serviceName":"ec2.amazonaws.com","resource":"i-0abc1234","sourceIp":"18.100.5.7","path":"/metadata","message":"instance attempted access to 169.254.169.254 latest/meta-data"}

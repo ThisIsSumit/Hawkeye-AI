@@ -1,0 +1,172 @@
+###################### Filebeat Configuration ############################
+# Forward Nginx, Auth, Firewall logs to HawkEye Security Platform via REST API
+
+###################### Filebeat inputs ############################
+filebeat.inputs:
+
+# ─── Nginx Access Logs ────────────────────────────────────────────────────────
+- type: log
+  enabled: true
+  paths:
+    - /var/log/nginx/access.log
+    - /var/log/apache2/access.log
+  fields:
+    source: nginx
+  multiline.pattern: '^\['
+  multiline.negate: true
+  multiline.match: after
+
+# ─── Nginx Error Logs (4xx/5xx responses) ─────────────────────────────────────
+- type: log
+  enabled: true
+  paths:
+    - /var/log/nginx/error.log
+    - /var/log/apache2/error.log
+  fields:
+    source: nginx_error
+  multiline.pattern: '^\d{4}/\d{2}/\d{2}'
+  multiline.negate: true
+  multiline.match: after
+
+# ─── Linux Auth Logs (failed logins, suspicious auth) ──────────────────────────
+- type: log
+  enabled: true
+  paths:
+    - /var/log/auth.log
+    - /var/log/secure
+  fields:
+    source: auth
+  multiline.pattern: '^\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}'
+  multiline.negate: true
+  multiline.match: after
+
+# ─── UFW Firewall Logs (blocked IPs, port scans) ──────────────────────────────
+- type: log
+  enabled: true
+  paths:
+    - /var/log/ufw.log
+  fields:
+    source: firewall_ufw
+  multiline.pattern: '^\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}'
+  multiline.negate: true
+  multiline.match: after
+
+# ─── Cloudflare/AWS WAF Logs (via S3 or direct) ───────────────────────────────
+# If using S3: configure aws input instead. For now, local file example:
+- type: log
+  enabled: true
+  paths:
+    - /var/log/waf/*.log
+  fields:
+    source: cloudflare_waf
+  json.keys_under_root: true
+
+###################### Output to HawkEye ############################
+output.http:
+  enabled: true
+  hosts:
+    - "http://localhost:4000/api/ingest"
+  headers:
+    x-ingest-token: "${HAWKEYE_INGEST_TOKEN}"
+    Content-Type: "application/json"
+
+  # Bulk settings for high-volume log streams
+  bulk_max_size: 100
+  flush_interval: 5s
+
+  # Timeout (in case ingest is slow)
+  timeout: 30s
+
+  # Retry policy for failed POSTs
+  max_retries: 3
+  backoff.init: 1s
+  backoff.max: 10s
+
+###################### Processors (Parse logs into HawkEye schema) ############################
+processors:
+  # ─── Add timestamp and metadata ────────────────────────────────────────────
+  - add_fields:
+      target: ''
+      fields:
+        timestamp: '${@timestamp}'
+
+  # ─── Extract IP from Nginx access logs ─────────────────────────────────────
+  - dissect:
+      tokenizer: '%{ip} - %{user} [%{timestamp}] "%{method} %{path} %{proto}" %{status} %{bytes} "%{referrer}" "%{ua}"'
+      field: message
+      when:
+        has_fields: ['source']
+        equals:
+          source: nginx
+
+  # ─── Extract source IP and port from firewall logs ────────────────────────
+  - dissect:
+      tokenizer: '%{timestamp} %{hostname} kernel: [%{?}] UFW %{firewall_action} %{?} IN=%{?in_iface} OUT=%{?out_iface} SRC=%{ip} DST=%{dst_ip} PROTO=%{proto} SPT=%{src_port} DPT=%{dst_port}'
+      field: message
+      when:
+        has_fields: ['source']
+        equals:
+          source: firewall_ufw
+
+  # ─── Count failed logins in auth logs ──────────────────────────────────────
+  - script:
+      lang: javascript
+      code: |
+        function process(event) {
+          var msg = event.Get("message");
+          if (!msg) return;
+
+          // Count failed login attempts in message
+          var failCount = (msg.match(/Failed password|authentication failure/gi) || []).length;
+          if (failCount > 0) {
+            event.Put("failed_logins", failCount);
+            var ipMatch = msg.match(/rhost=([0-9.]+)/);
+            if (ipMatch) event.Put("ip", ipMatch[1]);
+            var userMatch = msg.match(/user=([a-zA-Z0-9_\-\.]+)/);
+            if (userMatch) event.Put("user", userMatch[1]);
+          }
+
+          // Mark brute force attempts
+          if (failCount >= 5) {
+            event.Put("brute_force_detected", true);
+          }
+        }
+
+  # ─── Rename fields to HawkEye schema ────────────────────────────────────────
+  - rename:
+      fields:
+        ua: ua
+        status: status
+        method: method
+        path: path
+        proto: proto
+      ignore_missing: true
+
+  # ─── Drop bulk internal/health-check noise ────────────────────────────────
+  - drop_event:
+      when:
+        regexp:
+          message: '(GET /health|GET /status|HEAD /|GET /favicon|GET /robots\.txt|POST /metrics|127\.0\.0\.1|::1)'
+
+  # ─── Add country/ASN data from GeoIP (requires GeoIP database) ──────────────
+  # Uncomment if you have maxmind GeoIP2 database:
+  # - geoip:
+  #     field: ip
+  #     target_prefix: geo
+
+###################### Logging ############################
+# For debug: enable filebeat debug logging
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat
+  keepfiles: 7
+  permissions: 0600
+
+###################### Setup ############################
+setup.template.enabled: true
+
+# Disable Kibana/ES auto-setup (we're using HTTP output to HawkEye, not ES)
+setup.kibana.enabled: false
+setup.elasticsearch.enabled: false
