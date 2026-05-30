@@ -117,12 +117,12 @@ npm run dev
 
 ```mermaid
 flowchart TD
-    Simulator[Simulator (every 3.5s)] -->|generates Threat| StreamManager[StreamManager.broadcast('threat:new', threat)]
-    StreamManager -->|pushes SSE| useStream[useStream hook (frontend)]
-    useStream -->|parses StreamEvent<Threat>| StreamContext[StreamContext reducer]
-    StreamContext -->|liveEvents[]| LiveFeed[LiveFeed component]
-    StreamContext -->|kpiDelta| Dashboard[Dashboard KPI cards]
-    StreamContext -->|newAlerts[]| Sidebar[Sidebar badge + Alerts page banner]
+    Simulator -- generates Threat --> StreamManager
+    StreamManager -- pushes SSE --> UseStream
+    UseStream -- parses event --> StreamContext
+    StreamContext -- liveEvents[] --> LiveFeed
+    StreamContext -- kpiDelta --> Dashboard
+    StreamContext -- newAlerts[] --> Sidebar
 ```
 
 ### BullMQ Queue Flow
