@@ -6,6 +6,8 @@ import type {
 import { db } from '../lib/db.js';
 import type { AIAnalysis } from './ai.js';
 
+const SHOW_SYSTEM_DATA = process.env.ENABLE_SIMULATOR === 'true';
+
 const ATTACK_TYPES: AttackType[] = [
   'SQL Injection','XSS','DDoS','Brute Force',
   'Path Traversal','SSRF','Command Injection','CSRF',
@@ -106,7 +108,7 @@ export class ThreatStore {
   getThreats(userId?: string, page=1, pageSize=20, severity='', type='') {
     // If userId is provided, filter by that user; otherwise return all threats (system view)
     let f = userId 
-      ? [...this.threats].filter(t => t.userId === userId)
+      ? [...this.threats].filter(t => t.userId === userId || (SHOW_SYSTEM_DATA && !t.userId))
       : [...this.threats];
     if (severity) f = f.filter(t => t.severity === severity);
     if (type)     f = f.filter(t => t.attackType === type);
@@ -133,7 +135,7 @@ export class ThreatStore {
     const threat = this.threats.find(t => t.id === actualId);
     // If userId is provided, only return threat if it belongs to that user or is system (undefined)
     if (actualUserId) {
-      return threat?.userId === actualUserId ? threat : undefined;
+      return threat && (threat.userId === actualUserId || (SHOW_SYSTEM_DATA && !threat.userId)) ? threat : undefined;
     }
     return threat;
   }
@@ -183,7 +185,7 @@ export class ThreatStore {
   async getAnalytics(userId?: string): Promise<AnalyticsSummary> {
     // If userId is provided, filter to only that user's threats; otherwise return system-wide analytics
     const userThreats = userId 
-      ? this.threats.filter(t => t.userId === userId)
+      ? this.threats.filter(t => t.userId === userId || (SHOW_SYSTEM_DATA && !t.userId))
       : [...this.threats];
     const userAlerts = this.alerts.filter(a => userThreats.some(t => t.id === a.threatId));
 

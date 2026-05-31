@@ -22,6 +22,7 @@
     "rollup": "^4.60.1"
   },
   "devDependencies": {
+    "@babel/core": "^7.29.7",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",

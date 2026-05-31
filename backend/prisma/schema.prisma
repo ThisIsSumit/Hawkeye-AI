@@ -112,7 +112,7 @@ model ThreatLog {
   level     String
   message   String   @db.Text
   timestamp DateTime @default(now())
-  embedding Unsupported("vector(1024)")?
+  embedding Unsupported("vector(1536)")?
   threat    Threat   @relation(fields: [threatId], references: [id], onDelete: Cascade)
   @@index([threatId])
   @@index([timestamp])

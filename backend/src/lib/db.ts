@@ -7,7 +7,7 @@ import { store } from '../services/store.js';
 //
 // Setup:
 //   1. docker compose up -d
-//   2. cp .env.example .env   (fill in ANTHROPIC_API_KEY)
+//   2. cp .env.example .env   (fill in OPENROUTER_API_KEY, VOYAGE_API_KEY, DATABASE_URL)
 //   3. npm run db:generate    (generates Prisma client)
 //   4. npm run db:push        (creates tables)
 //   5. npm run dev
@@ -32,7 +32,7 @@ export async function initDb(): Promise<void> {
     await (db as any).$connect();
     await (db as any).$executeRawUnsafe('CREATE EXTENSION IF NOT EXISTS vector');
     
-    // Fix schema mismatch: if embedding is jsonb, convert to vector(1024)
+    // Fix schema mismatch: if embedding is jsonb, convert to vector(1536)
     await (db as any).$executeRawUnsafe(`
       DO $$ BEGIN
         IF EXISTS (
@@ -41,7 +41,7 @@ export async function initDb(): Promise<void> {
           AND column_name = 'embedding' 
           AND data_type = 'jsonb'
         ) THEN 
-          ALTER TABLE threat_logs ALTER COLUMN embedding TYPE vector(1024) USING embedding::text::vector(1024);
+          ALTER TABLE threat_logs ALTER COLUMN embedding TYPE vector(1536) USING embedding::text::vector(1536);
         END IF;
       END $$;
     `);

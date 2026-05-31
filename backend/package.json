@@ -14,14 +14,14 @@
     "ingest:replay": "tsx scripts/replayDummyLogs.ts",
     "db:generate": "prisma generate --config prisma.config.ts",
     "db:push": "prisma db push --config prisma.config.ts || npm run db:push:docker",
-    "db:push:docker": "docker run --rm --network hawkeye_default -v \"%cd%\":/app -w /tmp node:22-bookworm sh -lc \"npx prisma db push --schema /app/prisma/schema.prisma --url postgresql://hawkeye:hawkeye_password@postgres:5432/hawkeye_db\"",
+    "db:push:docker": "docker run --rm --network backend_default -v \"%cd%\":/app -w /tmp node:22-bookworm sh -lc \"npx --yes prisma db push --schema /app/prisma/schema.prisma --url postgresql://hawkeye:hawkeye_password@postgres:5432/hawkeye_db\"",
     "db:migrate": "prisma migrate dev --config prisma.config.ts",
     "db:studio": "prisma studio --config prisma.config.ts",
     "worker": "tsx src/workers/alertWorker.ts"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^7.7.0",
-    "@prisma/client": "^7.7.0",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.12.0",
     "cors": "^2.8.5",
@@ -30,7 +30,7 @@
     "jsonwebtoken": "^9.0.2",
     "pdfkit": "^0.18.0",
     "pg": "^8.20.0",
-    "uuid": "^9.0.1",
+    "uuid": "^14.0.0",
     "ws": "^8.17.1"
   },
   "devDependencies": {
@@ -44,10 +44,10 @@
     "@types/uuid": "^9.0.8",
     "@types/ws": "^8.5.11",
     "dotenv": "^16.6.1",
-    "prisma": "^7.7.0",
+    "prisma": "^7.8.0",
     "supertest": "^7.1.1",
     "tsx": "^4.16.2",
     "typescript": "^5.5.3",
-    "vitest": "^2.1.8"
+    "vitest": "^4.1.7"
   }
 }

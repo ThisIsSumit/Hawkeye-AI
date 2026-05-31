@@ -102,7 +102,7 @@ export function Reports() {
           <button
             onClick={handleGenerateReport}
             disabled={generateMutation.isPending}
-            className="flex items-center gap-2 bg-primary text-on-primary px-4 py-2 rounded font-mono text-xs uppercase tracking-wider hover:bg-primary/90 transition-colors shadow-glow-primary disabled:opacity-50"
+            className="flex items-center gap-2 bg-black text-on-primary px-4 py-2 rounded font-mono text-xs uppercase tracking-wider hover:bg-gray-700 transition-colors shadow-glow-primary disabled:opacity-50"
           >
             {generateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
             {generateMutation.isPending ? 'Generating' : 'Generate Report'}

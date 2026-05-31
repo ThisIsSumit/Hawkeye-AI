@@ -1,7 +1,9 @@
 import { v4 as uuid } from 'uuid';
 import { store } from './store.js';
 import { db } from '../lib/db.js';
-import { generateEmbedding } from '../lib/voyage.js';
+
+// Embedding model to use (can be made configurable)
+const DEFAULT_EMBEDDING_MODEL = process.env.OPENROUTER_EMBEDDING_MODEL || 'openai/text-embedding-3-small';
 
 // ─── RAG — Natural language log querying ─────────────────────────────────────
 // Phase 5: Embed threat logs with Voyage AI, query via pgvector.
@@ -21,7 +23,101 @@ export interface RagSource {
   relevance: number;
 }
 
+interface AttackCount {
+  type: string;
+  count: number;
+}
+
+function countAttackTypes(sources: RagSource[]): AttackCount[] {
+  const attackCounts = new Map<string, number>();
+
+  for (const source of sources) {
+    attackCounts.set(source.attackType, (attackCounts.get(source.attackType) ?? 0) + 1);
+  }
+
+  return [...attackCounts.entries()]
+    .map(([type, count]) => ({ type, count }))
+    .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
+}
+
+function mergeSources(primary: RagSource[], secondary: RagSource[], limit = 20): RagSource[] {
+  const seen = new Set(primary.map((source) => source.threatId));
+  const merged = [...primary];
+
+  for (const source of secondary) {
+    if (merged.length >= limit) break;
+    if (seen.has(source.threatId)) continue;
+    seen.add(source.threatId);
+    merged.push(source);
+  }
+
+  return merged;
+}
+
+function buildEvidenceSummary(sources: RagSource[]): string {
+  if (sources.length === 0) {
+    return 'Retrieved evidence: none.';
+  }
+
+  const ipCounts = new Map<string, number>();
+  for (const source of sources) {
+    ipCounts.set(source.sourceIp, (ipCounts.get(source.sourceIp) ?? 0) + 1);
+  }
+
+  const sortedAttacks = countAttackTypes(sources);
+  const sortedIps = [...ipCounts.entries()].sort((a, b) => b[1] - a[1]);
+
+  const attackSummary = sortedAttacks
+    .map(({ type, count }) => `${type}: ${count}`)
+    .join(', ');
+  const ipSummary = sortedIps
+    .slice(0, 5)
+    .map(([ip, count]) => `${ip}: ${count}`)
+    .join(', ');
+
+  return [
+    `Retrieved evidence count: ${sources.length}`,
+    `Attack type counts in retrieved evidence: ${attackSummary}`,
+    `Top source IP counts in retrieved evidence: ${ipSummary}`,
+  ].join('\n');
+}
+
 // ─── Keyword fallback search ──────────────────────────────────────────────────
+
+// ─── Embedding via OpenRouter ────────────────────────────────────────────────
+async function generateEmbedding(text: string, apiKey?: string | null): Promise<number[] | null> {
+  const key = apiKey || process.env.OPENROUTER_API_KEY;
+  if (!key) {
+    console.error('[RAG] No OpenRouter API key provided for embedding.');
+    return null;
+  }
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${key}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: DEFAULT_EMBEDDING_MODEL,
+        input: text,
+      }),
+    });
+    if (!res.ok) {
+      console.error(`[RAG] OpenRouter embedding error: ${res.status}`);
+      return null;
+    }
+    const data = await res.json();
+    if (data && data.data && data.data[0] && Array.isArray(data.data[0].embedding)) {
+      return data.data[0].embedding;
+    }
+    console.error('[RAG] Unexpected embedding response:', data);
+    return null;
+  } catch (err) {
+    console.error('[RAG] Embedding fetch failed:', err);
+    return null;
+  }
+}
 
 function keywordSearch(query: string): RagSource[] {
   const q     = query.toLowerCase();
@@ -46,10 +142,15 @@ async function generateAnswer(
   sources: RagSource[],
   apiKey:  string | null,
   history: Array<{ role: 'user' | 'assistant'; content: string }> = [],
+  evidenceSummary = '',
 ): Promise<string> {
   if (!apiKey) {
-    if (sources.length === 0) return `I am currently operating in limited keyword mode. I found no immediate matches for "${query}" in the active threat logs.`;
-    return `HawkEye Node (Offline Mode): I found ${sources.length} matching events. The primary origin is ${sources[0].sourceIp} involving ${sources[0].attackType}. Please configure an API key for deep cognitive analysis.`;
+    if (sources.length === 0) {
+      return `No relevant security events were found for your request.\n\n**Tips:**\n- Try different keywords (e.g., IP, attack type, endpoint, country)\n- Expand your query or use more general terms\n- If you expect data, ensure the simulator is running or ingest logs\n\nYou can also wait for new threats to appear, or check system status.`;
+    }
+    const topAttack = countAttackTypes(sources)[0];
+    const topSource = sources.find((source) => source.attackType === topAttack?.type) ?? sources[0];
+    return `HawkEye Node (Offline Mode): I found ${sources.length} matching events. The strongest signal in the retrieved evidence points to ${topAttack?.type ?? topSource.attackType} with ${topAttack?.count ?? sources.length} hits. The primary origin is ${topSource.sourceIp}. Please configure an API key for deep cognitive analysis.`;
   }
 
   // Build the system instructions
@@ -58,19 +159,24 @@ Your personality is professional, precise, and mission-focused.
 
 BEHAVIOR RULES:
 1. GREETINGS: If the user says "hi", "hello", or "how are you", respond briefly and professionally. Example: "Greetings, Commander. System status nominal. How can I assist with your threat intelligence protocols today?"
-2. SECURITY QUERIES: If the user asks about threats, IPs, or logs, use the provided DATA below. 
-3. DATA USAGE: If DATA is provided, be specific. Mention IPs, types, and counts.
-4. NO DATA: If DATA is empty and the query is about specific threats, explain that no matches were found in the current log matrix.
-5. STYLE: Keep it to 2-4 sentences. No markdown (no bold, no italics, no bullet points). Use plain text.
+2. SECURITY QUERIES: If the user asks about threats, IPs, or logs, use the provided DATA and EVIDENCE below.
+3. DATA USAGE: If DATA is provided, be specific. Mention IPs, types, counts, and the strongest patterns in the evidence.
+4. NO DATA: If DATA is empty, explain that no matching security events were found in the current log matrix.
+5. EVIDENCE RULE: When the user asks which attack is most frequent or similar, answer from the evidence counts, not from a keyword match.
+6. STYLE: Keep it to 2-4 sentences. No markdown (no bold, no italics, no bullet points). Use plain text.
 `;
 
   const context = sources.length > 0
     ? `DATA (Current matched logs):\n${sources
         .map(s => `- [${s.threatId}] ${s.attackType} from ${s.sourceIp} at ${new Date(s.timestamp).toLocaleString()} (relevance: ${Math.round(s.relevance * 100)}%)`)
         .join('\n')}`
-    : "DATA: No matching security events found for this specific query.";
+    : 'DATA: No matching security events found for this specific query.';
 
-  const userPrompt = `Query: ${query}\n\n${context}`;
+  const userPrompt = [
+    `Query: ${query}`,
+    evidenceSummary ? `EVIDENCE:\n${evidenceSummary}` : 'EVIDENCE: None.',
+    context,
+  ].join('\n\n');
 
   try {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -111,27 +217,14 @@ class RAGService {
     return process.env.OPENROUTER_API_KEY || null;
   }
 
-  private embeddingQueue: Promise<any> = Promise.resolve();
 
-  private async queuedGenerateEmbedding(text: string): Promise<number[] | null> {
-    const next = this.embeddingQueue.then(async () => {
-      const start = Date.now();
-      const result = await generateEmbedding(text);
-      // Ensure at least 30s gap for free tier stability
-      const elapsed = Date.now() - start;
-      const delay = Math.max(0, 30000 - elapsed);
-      if (delay > 0) {
-        console.log(`[Voyage] Rate limit safety: waiting ${Math.round(delay/1000)}s...`);
-        await new Promise(r => setTimeout(r, delay));
-      }
-      return result;
-    });
-    this.embeddingQueue = next.catch(() => {}); // Prevent queue crash
-    return next;
+  // No queueing logic for OpenRouter; if you want to rate-limit, add here
+  private async generateEmbedding(text: string): Promise<number[] | null> {
+    return generateEmbedding(text, this.apiKey);
   }
 
   private async semanticSearch(query: string): Promise<RagSource[]> {
-    const embedding = await this.queuedGenerateEmbedding(query);
+    const embedding = await this.generateEmbedding(query);
     if (!embedding || !db) return [];
 
     try {
@@ -148,7 +241,7 @@ class RAGService {
         JOIN threats t ON tl."threatId" = t.id
         WHERE tl.embedding IS NOT NULL
         ORDER BY tl.embedding <=> $1::vector
-        LIMIT 5
+        LIMIT 20
       `, vectorStr);
 
       return (results as any[]).map(r => ({
@@ -164,11 +257,27 @@ class RAGService {
     }
   }
 
+  private expandWithRecentThreats(sources: RagSource[], limit = 20): RagSource[] {
+    if (sources.length >= 5) {
+      return sources.slice(0, limit);
+    }
+
+    const recentThreats = store.getRecentThreats(limit * 2).map((threat) => ({
+      threatId: threat.id,
+      sourceIp: threat.sourceIp,
+      attackType: threat.attackType,
+      timestamp: threat.timestamp,
+      relevance: 0.25,
+    } satisfies RagSource));
+
+    return mergeSources(sources, recentThreats, limit);
+  }
+
   async indexLog(threatId: string, message: string): Promise<void> {
     if (!db) return;
 
     try {
-      const embedding = await this.queuedGenerateEmbedding(message);
+      const embedding = await this.generateEmbedding(message);
       const vectorStr = embedding ? `[${embedding.join(',')}]` : null;
 
       if (vectorStr) {
@@ -179,7 +288,6 @@ class RAGService {
         `, uuid(), threatId, 'info', message, vectorStr);
       } else {
         // Fallback for keyword search if embedding generation fails
-        // USE RAW SQL to avoid Prisma vector deserialization crash (P2023)
         await db.$executeRawUnsafe(`
           INSERT INTO threat_logs (id, "threatId", level, message, timestamp)
           VALUES ($1, $2, $3, $4, NOW())
@@ -202,7 +310,10 @@ class RAGService {
       sources = keywordSearch(question);
     }
 
-    const answer = await generateAnswer(question, sources, key, history);
+    sources = this.expandWithRecentThreats(sources);
+
+    const evidenceSummary = buildEvidenceSummary(sources);
+    const answer = await generateAnswer(question, sources, key, history, evidenceSummary);
 
     return {
       answer,
