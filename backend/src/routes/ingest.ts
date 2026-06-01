@@ -4,6 +4,7 @@ import { store } from '../services/store.js';
 import { streamManager } from '../services/stream.js';
 import { queueService } from '../services/queue.js';
 import { ragService } from '../services/ragService.js';
+import { deliverTelemetryForAlert } from '../services/telemetry.js';
 
 export const ingestRouter = Router();
 
@@ -68,7 +69,16 @@ ingestRouter.post('/ingest', async (req: Request, res: Response) => {
   if (storedThreat.severity === 'critical' || storedThreat.severity === 'high') {
     const alerts = store.getAlerts(1, 1);
     if (alerts.items.length > 0) {
-      streamManager.broadcast('alert:new', alerts.items[0]);
+      const alert = alerts.items[0];
+      streamManager.broadcast('alert:new', alert);
+
+      setImmediate(async () => {
+        try {
+          await deliverTelemetryForAlert({ alert, threat: storedThreat });
+        } catch (error) {
+          console.error('[Ingest] Telemetry delivery failed:', error);
+        }
+      });
     }
   }
 

@@ -14,6 +14,7 @@ import cors from 'cors';
 import { router }      from './routes/api.js';
 import { ingestRouter } from './routes/ingest.js';
 import { authRouter }  from './routes/auth.js';
+import { settingsRouter } from './routes/settings.js';
 import { simulator }   from './services/simulator.js';
 import { queueService } from './services/queue.js';
 import { closeRedis }  from './lib/redis.js';
@@ -25,6 +26,7 @@ const CLIENT_URL = process.env.CLIENT_URL ?? 'http://localhost:5173';
 const ENABLE_SIMULATOR = process.env.ENABLE_SIMULATOR === 'true';
 
 const app = express();
+app.disable('x-powered-by');
 
 app.use(cors({
   origin:      CLIENT_URL,
@@ -38,6 +40,7 @@ app.use(requestLogger);
 app.use('/api/auth', authRouter);
 app.use('/api', ingestRouter);  // /api/ingest handler
 app.use('/api', router);        // other API handlers
+app.use('/api', settingsRouter); // settings + tokens handlers
 app.use(notFound);
 app.use(errorHandler);
 

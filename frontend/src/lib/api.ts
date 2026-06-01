@@ -127,6 +127,23 @@ export const api = {
     stats: ()                           => get<unknown>('/queue/stats'),
   },
 
+  tokens: {
+    list:   () => get<Array<{ id: string; name: string; valueMasked?: string; active: boolean; createdAt: string }>>('/tokens'),
+    create: (body: { name: string; environment?: string }) => post<{ id: string; name: string; token: string; createdAt: string }>('/tokens', body),
+    revoke: (id: string) => post<{ success: boolean }>(`/tokens/${id}/revoke`),
+  },
+
+  settings: {
+    thresholds: {
+      get:    () => get<Record<string, number>>('/settings/thresholds'),
+      update: (payload: Record<string, number>) => post<{ success: boolean; thresholds: Record<string, number> }>('/settings/thresholds', payload),
+    },
+    telemetry: {
+      list:   () => get<Array<{ id: string; label: string; desc: string; enabled: boolean; config?: unknown }>>('/settings/telemetry'),
+      update: (id: string, payload: { enabled?: boolean; config?: unknown }) => post<{ success: boolean; channel: unknown }>(`/settings/telemetry/${id}`, payload),
+    },
+  },
+
   // Phase 5 — RAG
   logs: {
     query: (question: string, history: Array<{ role: 'user' | 'assistant'; content: string }> = []) =>

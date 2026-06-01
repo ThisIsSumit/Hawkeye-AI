@@ -1,4 +1,5 @@
 import { store } from '../services/store.js';
+import { buildDefaultTelemetryChannels } from '../services/telemetryDefaults.js';
 // ─── Database layer ───────────────────────────────────────────────────────────
 // PostgreSQL via Prisma. Full setup instructions in README.
 //
@@ -47,6 +48,7 @@ export async function initDb(): Promise<void> {
     `);
 
     await seedUsers(db);
+    await ensureSettingsTables(db);
     await store.hydrate();
     console.log('[DB] PostgreSQL connected (pgvector enabled + schema verified + users seeded)');
   } catch (e) {
@@ -93,6 +95,86 @@ async function seedUsers(prisma: any): Promise<void> {
       create: u,
     });
   }
+}
+
+async function ensureSettingsTables(prisma: any): Promise<void> {
+  const defaultThresholds = JSON.stringify({
+    sql_injection: 75,
+    brute_force: 50,
+    ddos: 85,
+    anomaly_cutoff: 60,
+    xss: 70,
+  }).replaceAll("'", "''");
+
+  const defaultTelemetry = buildDefaultTelemetryChannels();
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS api_tokens (
+      id text PRIMARY KEY,
+      name text NOT NULL,
+      token_hash text NOT NULL UNIQUE,
+      value_masked text NOT NULL,
+      environment text NOT NULL DEFAULT 'production',
+      active boolean NOT NULL DEFAULT true,
+      created_by text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      revoked_at timestamptz
+    );
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS setting_thresholds (
+      id text PRIMARY KEY,
+      thresholds jsonb NOT NULL,
+      updated_by text,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    );
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    INSERT INTO setting_thresholds (id, thresholds)
+    VALUES ('global', '${defaultThresholds}'::jsonb)
+    ON CONFLICT (id) DO NOTHING;
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS telemetry_channels (
+      id text PRIMARY KEY,
+      label text NOT NULL,
+      description text NOT NULL,
+      enabled boolean NOT NULL DEFAULT true,
+      config jsonb NOT NULL DEFAULT '{}'::jsonb,
+      updated_by text,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    );
+  `);
+
+  for (const channel of defaultTelemetry) {
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO telemetry_channels (id, label, description, enabled, config)
+      VALUES (
+        '${channel.id.replaceAll("'", "''")}',
+        '${channel.label.replaceAll("'", "''")}',
+        '${channel.desc.replaceAll("'", "''")}',
+        ${channel.enabled},
+        '${JSON.stringify(channel.config).replaceAll("'", "''")}'::jsonb
+      )
+      ON CONFLICT (id) DO NOTHING;
+    `);
+  }
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS settings_audit_logs (
+      id text PRIMARY KEY,
+      action text NOT NULL,
+      actor_id text,
+      actor_role text,
+      target_type text NOT NULL,
+      target_id text,
+      details jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at timestamptz NOT NULL DEFAULT now()
+    );
+  `);
 }
 
 export async function disconnectDb(): Promise<void> {

@@ -108,7 +108,7 @@ async function generateEmbedding(text: string, apiKey?: string | null): Promise<
       return null;
     }
     const data = await res.json();
-    if (data && data.data && data.data[0] && Array.isArray(data.data[0].embedding)) {
+    if (Array.isArray(data?.data?.[0]?.embedding)) {
       return data.data[0].embedding;
     }
     console.error('[RAG] Unexpected embedding response:', data);
@@ -166,6 +166,14 @@ BEHAVIOR RULES:
 6. STYLE: Keep it to 2-4 sentences. No markdown (no bold, no italics, no bullet points). Use plain text.
 `;
 
+  const sanitizeAnswer = (raw: string): string => {
+    let cleaned = raw;
+    // Some models echo prompt labels like "Query:"; strip those from final user-visible text.
+    cleaned = cleaned.replace(/(^|\n)\s*Query\s*:\s*.*(?=\n|$)/gi, '$1');
+    cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim();
+    return cleaned;
+  };
+
   const context = sources.length > 0
     ? `DATA (Current matched logs):\n${sources
         .map(s => `- [${s.threatId}] ${s.attackType} from ${s.sourceIp} at ${new Date(s.timestamp).toLocaleString()} (relevance: ${Math.round(s.relevance * 100)}%)`)
@@ -173,7 +181,7 @@ BEHAVIOR RULES:
     : 'DATA: No matching security events found for this specific query.';
 
   const userPrompt = [
-    `Query: ${query}`,
+    `User question: ${query}`,
     evidenceSummary ? `EVIDENCE:\n${evidenceSummary}` : 'EVIDENCE: None.',
     context,
   ].join('\n\n');
@@ -203,7 +211,8 @@ BEHAVIOR RULES:
     }
 
     const data = await res.json();
-    return data.choices?.[0]?.message?.content || "Signal lost. Please re-initialize.";
+    const content = data.choices?.[0]?.message?.content;
+    return content ? sanitizeAnswer(content) : "Signal lost. Please re-initialize.";
   } catch (err) {
     console.error('[RAG] OpenRouter call failed:', err);
     return "The HawkEye neural link is currently unstable. Falling back to local keyword processing.";
@@ -213,6 +222,8 @@ BEHAVIOR RULES:
 // ─── RAG Service ─────────────────────────────────────────────────────────────
 
 class RAGService {
+  private embeddingsCompatibleWithDb = true;
+
   private get apiKey(): string | null {
     return process.env.OPENROUTER_API_KEY || null;
   }
@@ -221,6 +232,11 @@ class RAGService {
   // No queueing logic for OpenRouter; if you want to rate-limit, add here
   private async generateEmbedding(text: string): Promise<number[] | null> {
     return generateEmbedding(text, this.apiKey);
+  }
+
+  private isVectorDimensionMismatch(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error);
+    return /expected\s+\d+\s+dimensions,\s+not\s+\d+/i.test(message);
   }
 
   private async semanticSearch(query: string): Promise<RagSource[]> {
@@ -280,18 +296,32 @@ class RAGService {
       const embedding = await this.generateEmbedding(message);
       const vectorStr = embedding ? `[${embedding.join(',')}]` : null;
 
-      if (vectorStr) {
-        await db.$executeRawUnsafe(`
-          INSERT INTO threat_logs (id, "threatId", level, message, timestamp, embedding)
-          VALUES ($1, $2, $3, $4, NOW(), $5::vector)
-          ON CONFLICT (id) DO UPDATE SET embedding = $5::vector
-        `, uuid(), threatId, 'info', message, vectorStr);
-      } else {
-        // Fallback for keyword search if embedding generation fails
+      const insertWithoutEmbedding = async (): Promise<void> => {
         await db.$executeRawUnsafe(`
           INSERT INTO threat_logs (id, "threatId", level, message, timestamp)
           VALUES ($1, $2, $3, $4, NOW())
         `, uuid(), threatId, 'info', message);
+      };
+
+      if (vectorStr && this.embeddingsCompatibleWithDb) {
+        try {
+          await db.$executeRawUnsafe(`
+            INSERT INTO threat_logs (id, "threatId", level, message, timestamp, embedding)
+            VALUES ($1, $2, $3, $4, NOW(), $5::vector)
+            ON CONFLICT (id) DO UPDATE SET embedding = $5::vector
+          `, uuid(), threatId, 'info', message, vectorStr);
+        } catch (error) {
+          if (!this.isVectorDimensionMismatch(error)) {
+            throw error;
+          }
+
+          this.embeddingsCompatibleWithDb = false;
+          console.warn('[RAG] Embedding dimension mismatch detected; storing log without embedding for keyword fallback.');
+          await insertWithoutEmbedding();
+        }
+      } else {
+        // Fallback for keyword search if embedding generation fails
+        await insertWithoutEmbedding();
       }
     } catch (err) {
       console.error('[RAG] Indexing failed:', err);
