@@ -1,0 +1,9 @@
+run_date,test_case,input_source,expected_http_status,actual_http_status,expected_result,actual_result,status,details
+2026-09-19,missing ingest token,raw request,401,401,UNAUTHORIZED,UNAUTHORIZED,PASS,Request rejected without x-ingest-token
+2026-09-19,benign nginx health log,dummy-logs.jsonl,204,204,no threat,no threat,PASS,Noise event skipped and not queued
+2026-09-19,nginx SQL injection,dummy-logs.jsonl,201,201,SQL Injection / critical,SQL Injection / critical,PASS,44.55.66.77 targeting /api/users?id=1 union select password from users
+2026-09-19,fifth failed SSH login,dummy-logs.jsonl,201,201,Brute Force / medium,Brute Force / medium,PASS,Threshold triggered after five failures from one source IP
+2026-09-19,Suricata port scan,dummy-logs.jsonl,201,201,DDoS / high,DDoS / high,PASS,203.0.113.9 classified as a high-severity network threat
+2026-09-19,Cloudflare WAF XSS,dummy-logs.jsonl,201,201,XSS / high,XSS / high,PASS,172.20.1.5 targeting /comment
+2026-09-19,replay all real JSONL fixtures,dummy-logs.jsonl,6 events processed,6 events processed,4 threats and 2 noise events,4 threats and 2 noise events,PASS,All checked-in fixture records produced expected outcomes
+2026-09-19,Filebeat ECS SQL injection,real ECS payload,200,200,SQL Injection / critical,SQL Injection / critical,PASS,Normalized source IP geo ASN endpoint severity user agent and authenticated user

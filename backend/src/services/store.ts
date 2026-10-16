@@ -105,6 +105,76 @@ export class ThreatStore {
     return this.ingestThreat(input);
   }
 
+  private normalizeAttackType(value?: string | AttackType): AttackType {
+    const raw = (value ?? '').toString().trim().toLowerCase();
+    if (!raw) return 'Brute Force';
+
+    const map: Record<string, AttackType> = {
+      sql: 'SQL Injection',
+      'sql injection': 'SQL Injection',
+      injection: 'SQL Injection',
+      xss: 'XSS',
+      'cross-site scripting': 'XSS',
+      ddos: 'DDoS',
+      dos: 'DDoS',
+      'distributed denial of service': 'DDoS',
+      bruteforce: 'Brute Force',
+      'brute force': 'Brute Force',
+      login: 'Brute Force',
+      auth: 'Brute Force',
+      'path traversal': 'Path Traversal',
+      traversal: 'Path Traversal',
+      ssrf: 'SSRF',
+      command: 'Command Injection',
+      'command injection': 'Command Injection',
+      csrf: 'CSRF',
+      'cross-site request forgery': 'CSRF',
+      network: 'DDoS',
+      intrusion: 'Brute Force',
+      'intrusion_detection': 'Brute Force',
+      'web-application-attack': 'SQL Injection',
+      'web attack': 'SQL Injection',
+      'http attack': 'XSS',
+      'unauthorized access': 'Brute Force',
+    };
+
+    return map[raw] ?? 'Brute Force';
+  }
+
+  private normalizeSeverity(value?: Severity | string): Severity {
+    if (!value) return 'medium';
+    const raw = value.toString().trim().toLowerCase();
+    if (raw === 'critical' || raw === '4') return 'critical';
+    if (raw === 'high' || raw === '3') return 'high';
+    if (raw === 'medium' || raw === '2') return 'medium';
+    if (raw === 'low' || raw === '1') return 'low';
+    return 'medium';
+  }
+
+  buildThreat(input: Partial<ThreatIngestInput> & { sourceIp?: string; attackType?: string | AttackType; severity?: Severity | string; endpoint?: string; country?: string; countryCode?: string; asn?: string; status?: ThreatStatus | string; attempts?: number; userAgent?: string }): Threat {
+    const threatInput: ThreatIngestInput = {
+      id: input.id,
+      timestamp: input.timestamp ?? new Date().toISOString(),
+      userId: input.userId,
+      sourceIp: input.sourceIp ?? '0.0.0.0',
+      country: input.country ?? 'Unknown',
+      countryCode: input.countryCode ?? 'UN',
+      asn: input.asn ?? 'Unknown',
+      attackType: this.normalizeAttackType(input.attackType),
+      endpoint: input.endpoint ?? '/unknown',
+      severity: this.normalizeSeverity(input.severity),
+      status: (input.status ?? 'active') as ThreatStatus,
+      attempts: input.attempts ?? 1,
+      userAgent: input.userAgent ?? '',
+    };
+
+    return this.ingestThreat(threatInput);
+  }
+
+  ingestExternalThreat(input: Partial<ThreatIngestInput> & { sourceIp?: string; attackType?: string | AttackType; severity?: Severity | string; endpoint?: string; country?: string; countryCode?: string; asn?: string; status?: ThreatStatus | string; attempts?: number; userAgent?: string }): Threat {
+    return this.buildThreat(input);
+  }
+
   getThreats(userId?: string, page=1, pageSize=20, severity='', type='') {
     // If userId is provided, filter by that user; otherwise return all threats (system view)
     let f = userId 

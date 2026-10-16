@@ -58,6 +58,47 @@ router.get('/analytics/summary', requireAuth, async (req, res) => {
   ok(res, await store.getAnalytics(req.user!.userId));
 });
 
+router.post('/ingest', requireAuth, async (req, res) => {
+  try {
+    const raw = req.body ?? {};
+    const events = Array.isArray(raw) ? raw : Array.isArray(raw.events) ? raw.events : [raw];
+    const ingested: string[] = [];
+
+    for (const item of events.slice(0, 50)) {
+      if (!item || typeof item !== 'object') continue;
+
+      const event = item as Record<string, unknown>;
+      const source = (event.source as Record<string, unknown>) ?? {};
+      const url = (event.url as Record<string, unknown>) ?? {};
+      const userAgent = (event.user_agent as Record<string, unknown>) ?? {};
+
+      const threat = store.ingestExternalThreat({
+        userId: req.user?.userId,
+        sourceIp: String((source.ip as string) ?? event.sourceIp ?? '0.0.0.0'),
+        country: String((source.geo as Record<string, unknown>)?.country_name ?? event.country ?? 'Unknown'),
+        countryCode: String((source.geo as Record<string, unknown>)?.country_iso_code ?? event.countryCode ?? 'UN'),
+        asn: String((source.as as Record<string, unknown>)?.organization ?? event.asn ?? 'Unknown'),
+        attackType: (String(event.attackType ?? (event.event as Record<string, unknown>)?.category ?? (event.event as Record<string, unknown>)?.type ?? 'network') as 'SQL Injection' | 'XSS' | 'DDoS' | 'Brute Force' | 'Path Traversal' | 'SSRF' | 'Command Injection' | 'CSRF'),
+        endpoint: String(url.path ?? event.endpoint ?? '/unknown'),
+        severity: (String(event.severity ?? (event.event as Record<string, unknown>)?.severity ?? 'medium') as 'low' | 'medium' | 'high' | 'critical'),
+        status: 'active',
+        attempts: Number(event.attempts ?? 1),
+        userAgent: String(userAgent.original ?? event.userAgent ?? ''),
+        timestamp: String(event['@timestamp'] ?? event.timestamp ?? new Date().toISOString()),
+      });
+
+      streamManager.broadcast('threat:new', threat);
+      await queueService.enqueueAnalysis(threat);
+      ingested.push(threat.id);
+    }
+
+    ok(res, { ingested: ingested.length, ids: ingested }, 200);
+  } catch (caught) {
+    const message = caught instanceof Error ? caught.message : 'Ingest failed';
+    err(res, message, 'INGEST_ERROR', 400);
+  }
+});
+
 // ─── Threats ──────────────────────────────────────────────────────────────────
 
 router.get('/threats', requireAuth, (req, res) => {

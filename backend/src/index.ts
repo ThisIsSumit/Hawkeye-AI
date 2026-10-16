@@ -10,6 +10,8 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
 import { router }      from './routes/api.js';
 import { ingestRouter } from './routes/ingest.js';
@@ -34,13 +36,29 @@ app.use(cors({
   methods:     ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-app.use(express.json());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: false,
+}));
+app.use('/api', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many requests', code: 'RATE_LIMITED' },
+}));
+app.use('/api/auth/login', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, error: 'Too many login attempts', code: 'RATE_LIMITED' },
+}));
+app.use(express.json({ limit: '1mb' }));
 app.use(requestLogger);
 
+app.use('/api', router);
 app.use('/api/auth', authRouter);
-app.use('/api', ingestRouter);  // /api/ingest handler
-app.use('/api', router);        // other API handlers
-app.use('/api', settingsRouter); // settings + tokens handlers
+app.use('/api', settingsRouter);
+app.use('/api', ingestRouter);
 app.use(notFound);
 app.use(errorHandler);
 

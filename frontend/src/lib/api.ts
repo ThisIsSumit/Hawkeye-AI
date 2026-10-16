@@ -4,7 +4,7 @@ import type {
   Threat, Alert, AnalyticsSummary, Report, AIAnalysis,
 } from '../types/index.ts';
 
-const BASE = '/api';
+const BASE = import.meta.env.VITE_API_URL ?? '/api';
 
 // ─── Fetch with auth header ───────────────────────────────────────────────────
 

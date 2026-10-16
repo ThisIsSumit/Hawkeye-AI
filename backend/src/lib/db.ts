@@ -1,3 +1,5 @@
+import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { store } from '../services/store.js';
 import { buildDefaultTelemetryChannels } from '../services/telemetryDefaults.js';
 // ─── Database layer ───────────────────────────────────────────────────────────
@@ -23,11 +25,6 @@ export async function initDb(): Promise<void> {
     return;
   }
   try {
-    // Dynamic import keeps this file compilable before `prisma generate` runs
-    const [{ PrismaClient }, { PrismaPg }] = await Promise.all([
-      import('@prisma/client'),
-      import('@prisma/adapter-pg'),
-    ]);
     const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
     db = new PrismaClient({ adapter, log: ['error'] });
     await (db as any).$connect();

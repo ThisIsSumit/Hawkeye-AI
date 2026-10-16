@@ -1,0 +1,25 @@
+filebeat.inputs:
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/nginx/access.log
+      - /var/log/auth.log
+      - /var/log/syslog
+    json.keys_under_root: true
+    json.add_error_key: true
+
+processors:
+  - add_host_metadata: ~
+  - add_cloud_metadata: ~
+
+output.http:
+  enabled: true
+  hosts: ["http://localhost:4000"]
+  path: "/api/ingest"
+  method: "POST"
+  headers:
+    Content-Type: "application/json"
+    Authorization: "Bearer YOUR_API_TOKEN_HERE"
+  codec.json:
+    pretty: false
+  timeout: 10s

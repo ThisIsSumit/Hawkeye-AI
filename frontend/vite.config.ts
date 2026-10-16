@@ -4,15 +4,25 @@ import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [react()],
-  resolve: {
-    alias: { '@': resolve(__dirname, 'src') },
+  resolve: { alias: { '@': resolve(__dirname, 'src') } },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          query: ['@tanstack/react-query'],
+          charts: ['chart.js'],
+        },
+      },
+    },
   },
   server: {
     port: 5173,
     proxy: {
-      // proxy all /api requests to the backend — avoids CORS in dev
       '/api': {
-        target:    'http://localhost:4000',
+        target: 'http://localhost:4000',
         changeOrigin: true,
       },
     },
