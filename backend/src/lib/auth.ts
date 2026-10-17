@@ -56,6 +56,10 @@ export async function findUserByEmail(email: string): Promise<UserRecord | null>
   return db.user.findUnique({ where: { email: normalizeEmail(email) } });
 }
 
+export function isDatabaseAvailable(): boolean {
+  return db !== null;
+}
+
 export async function findUserById(id: string): Promise<UserRecord | null> {
   if (!db) return null;
   return db.user.findUnique({ where: { id } });

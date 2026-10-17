@@ -279,6 +279,16 @@ export class ThreatStore {
       });
     }
 
+    const nowMs = Date.now();
+    const currentPeriodStart = nowMs - 24 * 60 * 60 * 1000;
+    const previousPeriodStart = nowMs - 2 * 24 * 60 * 60 * 1000;
+    const inCurrentPeriod = (threat: Threat) => new Date(threat.timestamp).getTime() >= currentPeriodStart;
+    const inPreviousPeriod = (threat: Threat) => {
+      const timestamp = new Date(threat.timestamp).getTime();
+      return timestamp >= previousPeriodStart && timestamp < currentPeriodStart;
+    };
+    const currentPeriodThreats = userThreats.filter(inCurrentPeriod);
+    const previousPeriodThreats = userThreats.filter(inPreviousPeriod);
     let totalEvents = userThreats.length;
     let blockedIPs  = userThreats.filter(t => t.status === 'blocked').length;
     let activeThreats = userThreats.filter(t => t.status==='active').length;
@@ -307,6 +317,15 @@ export class ThreatStore {
       criticalAlerts: userAlerts.filter(a => a.severity==='critical').length,
       blockedIPs,
       blockRate:      totalEvents > 0 ? Number(((blockedIPs / totalEvents) * 100).toFixed(2)) : 0,
+      changes: {
+        totalEvents: currentPeriodThreats.length - previousPeriodThreats.length,
+        activeThreats: currentPeriodThreats.filter(t => t.status === 'active').length
+          - previousPeriodThreats.filter(t => t.status === 'active').length,
+        criticalAlerts: currentPeriodThreats.filter(t => t.severity === 'critical').length
+          - previousPeriodThreats.filter(t => t.severity === 'critical').length,
+        blockedIPs: currentPeriodThreats.filter(t => t.status === 'blocked').length
+          - previousPeriodThreats.filter(t => t.status === 'blocked').length,
+      },
       trendData, attackDistribution, topAttackingIPs,
     };
   }

@@ -105,6 +105,7 @@ export function Landing() {
           <a href="#surface" onClick={() => setMenuOpen(false)}>Surface</a>
           <a href="#method" onClick={() => setMenuOpen(false)}>Method</a>
           <a href="#access" onClick={() => setMenuOpen(false)}>Access</a>
+          <Link to="/docs" onClick={() => setMenuOpen(false)}>Docs</Link>
           <span className="magnet" data-magnet data-sc-magnet="0.26"><Link className="nav-login" to="/login">Sign in <ArrowRight size={14} /></Link></span>
         </nav>
         <button className="nav-menu" type="button" aria-label={menuOpen ? 'Close navigation' : 'Open navigation'} onClick={() => setMenuOpen(!menuOpen)}>

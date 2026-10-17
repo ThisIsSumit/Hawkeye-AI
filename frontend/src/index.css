@@ -8,8 +8,8 @@
   * { box-sizing: border-box; }
   body {
     font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
-    background-color: #121315;
-    color: #e3e2e5;
+    background-color: #0b1010;
+    color: #edf1ed;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -31,14 +31,54 @@
   /* Custom space-age scrollbar */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: #0d0e10; }
-  ::-webkit-scrollbar-thumb { background: #1b1c1e; border-radius: 4px; border: 1px solid #404753; }
-  ::-webkit-scrollbar-thumb:hover { background: #343537; }
+  ::-webkit-scrollbar-thumb { background: #172221; border-radius: 4px; border: 1px solid #4b5b57; }
+  ::-webkit-scrollbar-thumb:hover { background: #253632; }
   
   /* Glassmorphism helpers */
   .glass-panel {
-    @apply bg-surface-high/20 backdrop-blur-2xl border border-outline-variant/30 shadow-glow;
+    @apply bg-surface-high/70 backdrop-blur-2xl border border-outline-variant/30 shadow-glow;
   }
   .glass-header {
-    @apply bg-surface-lowest/70 backdrop-blur-xl border-b border-outline-variant/20;
+    @apply bg-surface-lowest/80 backdrop-blur-xl border-b border-outline-variant/20;
+  }
+}
+
+@layer components {
+  .app-shell {
+    background-color: #0b1010;
+    background-image:
+      linear-gradient(rgba(189, 222, 208, .035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(189, 222, 208, .035) 1px, transparent 1px);
+    background-size: 72px 72px;
+  }
+
+  .app-shell main {
+    position: relative;
+  }
+
+  .app-shell main::before {
+    position: fixed;
+    top: 72px;
+    right: -180px;
+    width: 560px;
+    height: 370px;
+    content: '';
+    border: 1px solid rgba(200, 243, 106, .1);
+    border-radius: 50%;
+    transform: rotate(-18deg);
+    pointer-events: none;
+  }
+
+  .page-heading h1 {
+    font-family: 'Syne', sans-serif;
+    letter-spacing: -.05em;
+  }
+
+  .page-heading p {
+    color: #5d6e6b;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
   }
 }

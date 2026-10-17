@@ -1,0 +1,264 @@
+.auth-page {
+  --auth-ink: #edf1ed;
+  --auth-muted: #91a29d;
+  --auth-dim: #5d6e6b;
+  --auth-canvas: #0b1010;
+  --auth-panel: rgba(19, 27, 27, .82);
+  --auth-line: rgba(189, 222, 208, .14);
+  --auth-signal: #c8f36a;
+  --auth-signal-ink: #10150f;
+  position: relative;
+  display: flex;
+  min-height: 100svh;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 104px 24px 48px;
+  color: var(--auth-ink);
+  background: var(--auth-canvas);
+  font-family: 'DM Sans', sans-serif;
+}
+
+.auth-page::before {
+  position: absolute;
+  inset: 0;
+  content: '';
+  opacity: .5;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(189, 222, 208, .045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(189, 222, 208, .045) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(to bottom, #000, transparent 88%);
+}
+
+.auth-page::after {
+  position: absolute;
+  top: -220px;
+  right: -120px;
+  width: 620px;
+  height: 420px;
+  content: '';
+  border: 1px solid rgba(200, 243, 106, .13);
+  border-radius: 50%;
+  transform: rotate(-18deg);
+  pointer-events: none;
+}
+
+.auth-page__glow {
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  background: rgba(200, 243, 106, .08);
+  filter: blur(100px);
+  pointer-events: none;
+}
+
+.auth-page__glow--one { top: 8%; left: 8%; }
+.auth-page__glow--two { right: 12%; bottom: -18%; opacity: .45; }
+
+.auth-shell {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 430px);
+}
+
+.auth-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 auto 28px;
+  color: var(--auth-ink);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  text-decoration: none;
+}
+
+.auth-brand em { color: var(--auth-signal); font-style: normal; }
+
+.auth-brand__icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  color: var(--auth-signal-ink);
+  background: var(--auth-signal);
+  border-radius: 8px;
+}
+
+.auth-card {
+  position: relative;
+  overflow: hidden;
+  padding: 30px;
+  background: var(--auth-panel);
+  border: 1px solid rgba(200, 243, 106, .2);
+  border-radius: 10px;
+  box-shadow: 20px 30px 90px rgba(0, 0, 0, .38), inset 0 1px rgba(255, 255, 255, .07);
+  backdrop-filter: blur(24px);
+}
+
+.auth-card::before {
+  position: absolute;
+  inset: 0 18% auto;
+  height: 1px;
+  content: '';
+  background: linear-gradient(90deg, transparent, var(--auth-signal), transparent);
+  opacity: .6;
+}
+
+.auth-kicker, .auth-label, .auth-meta, .auth-error, .auth-demo__title {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.auth-kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 13px;
+  color: var(--auth-signal);
+  font-size: 10px;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.auth-kicker::before {
+  width: 6px;
+  height: 6px;
+  content: '';
+  border-radius: 50%;
+  background: var(--auth-signal);
+  box-shadow: 0 0 9px var(--auth-signal);
+}
+
+.auth-title {
+  margin: 0;
+  color: var(--auth-ink);
+  font-family: 'Syne', sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -.05em;
+}
+
+.auth-subtitle {
+  margin: 8px 0 25px;
+  color: var(--auth-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.auth-error {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 17px;
+  padding: 10px 12px;
+  color: #f2a59d;
+  background: rgba(242, 165, 157, .08);
+  border: 1px solid rgba(242, 165, 157, .25);
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.auth-form { display: grid; gap: 17px; }
+.auth-field { display: grid; gap: 7px; }
+
+.auth-label {
+  color: var(--auth-muted);
+  font-size: 10px;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 12px 13px;
+  color: var(--auth-ink);
+  background: rgba(11, 16, 16, .74);
+  border: 1px solid var(--auth-line);
+  border-radius: 6px;
+  outline: none;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.auth-input::placeholder { color: #52615e; }
+.auth-input:focus { border-color: rgba(200, 243, 106, .65); box-shadow: 0 0 0 3px rgba(200, 243, 106, .08); }
+
+.auth-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  margin-top: 3px;
+  padding: 13px 16px;
+  color: var(--auth-signal-ink);
+  background: var(--auth-signal);
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  transition: background .2s ease, transform .2s ease;
+}
+
+.auth-submit:hover { background: #dbff8f; transform: translateY(-1px); }
+.auth-submit:disabled { cursor: not-allowed; opacity: .6; transform: none; }
+
+.auth-divider {
+  height: 1px;
+  margin: 24px 0 18px;
+  background: var(--auth-line);
+}
+
+.auth-demo__title {
+  margin: 0 0 10px;
+  color: var(--auth-dim);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.auth-demo__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 9px 10px;
+  color: var(--auth-muted);
+  background: rgba(11, 16, 16, .34);
+  border: 1px solid transparent;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  text-align: left;
+  transition: border-color .2s ease, color .2s ease;
+}
+
+.auth-demo__item + .auth-demo__item { margin-top: 5px; }
+.auth-demo__item:hover { color: var(--auth-signal); border-color: var(--auth-line); }
+.auth-demo__role { color: var(--auth-signal); font-size: 9px; text-transform: uppercase; }
+
+.auth-footer {
+  margin: 19px 0 0;
+  color: var(--auth-dim);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  text-align: center;
+}
+
+.auth-footer a { color: var(--auth-signal); text-decoration: none; }
+.auth-footer a:hover { color: #dbff8f; }
+
+@media (max-width: 520px) {
+  .auth-page { padding: 88px 16px 32px; }
+  .auth-card { padding: 24px 20px; }
+  .auth-title { font-size: 25px; }
+}

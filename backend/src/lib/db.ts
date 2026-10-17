@@ -44,7 +44,7 @@ export async function initDb(): Promise<void> {
       END $$;
     `);
 
-    await seedUsers(db);
+    await seedDemoUsers(db);
     await ensureSettingsTables(db);
     await store.hydrate();
     console.log('[DB] PostgreSQL connected (pgvector enabled + schema verified + users seeded)');
@@ -55,8 +55,8 @@ export async function initDb(): Promise<void> {
   }
 }
 
-async function seedUsers(prisma: any): Promise<void> {
-  if (process.env.ENABLE_DEMO_USERS !== 'true') {
+export async function seedDemoUsers(prisma: any, force = false): Promise<void> {
+  if (!force && process.env.ENABLE_DEMO_USERS !== 'true') {
     return;
   }
 

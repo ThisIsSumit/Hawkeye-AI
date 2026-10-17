@@ -265,7 +265,6 @@ function quote(root: HTMLElement, splits: SplitText[]) {
 function access(root: HTMLElement, splits: SplitText[]) {
   const act = one(root, '#access');
   if (!act) return;
-  const SPAN = 1;
 
   const h2 = one(act, 'h2');
   const approach = approachTimeline(act, 'top 80%');

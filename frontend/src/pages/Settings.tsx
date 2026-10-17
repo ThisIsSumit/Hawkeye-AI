@@ -21,7 +21,7 @@ interface ApiTokenRecord {
 }
 
 function roleBadgeClass(role: string): string {
-  if (role === 'ADMIN') return 'bg-purple-500/10 text-purple-400 border border-purple-500/20';
+  if (role === 'ADMIN') return 'bg-primary/10 text-primary border border-primary/20';
   if (role === 'ANALYST') return 'bg-primary/10 text-primary border border-primary/20';
   return 'bg-surface-lowest border border-outline-variant/30 text-on-surface-variant';
 }
@@ -227,7 +227,9 @@ export function Settings() {
     setThresholdsError('');
     api.settings.thresholds.get()
       .then(data => {
-        if (!cancelled && data) setThresholds(prev => ({ ...prev, ...data }));
+        if (!cancelled && data) {
+          setThresholds(prev => ({ ...prev, ...data }));
+        }
       })
       .catch(err => { if (!cancelled) setThresholdsError(err instanceof Error ? err.message : 'Failed to load thresholds'); })
       .finally(() => { if (!cancelled) setThresholdsLoading(false); });

@@ -1,5 +1,6 @@
 import {
   useQuery, useMutation, useQueryClient,
+  keepPreviousData,
   type UseQueryResult,
 } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
@@ -30,7 +31,8 @@ export function useAnalytics(): UseQueryResult<AnalyticsSummary> {
     queryKey:        QK.analytics,
     queryFn:         api.analytics.summary,
     staleTime:       10_000,   // 10s — SSE keeps it fresher anyway
-    refetchInterval: 30_000,   // fallback poll every 30s
+    refetchInterval: 60_000,   // SSE carries live counts; poll as a fallback
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -46,6 +48,7 @@ export function useThreats(
     queryKey: QK.threats(page, pageSize, severity, type),
     queryFn:  () => api.threats.list(page, pageSize, severity, type),
     staleTime: 5_000,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -55,6 +58,7 @@ export function useThreat(id: string): UseQueryResult<Threat> {
     queryFn:  () => api.threats.byId(id),
     enabled:  !!id,
     staleTime: 5_000,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -91,6 +95,7 @@ export function useAlerts(
     queryKey: QK.alerts(page, pageSize, status),
     queryFn:  () => api.alerts.list(page, pageSize, status),
     staleTime: 5_000,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -136,6 +141,7 @@ export function useReports(
     queryFn:  () => api.reports.list(page, pageSize),
     staleTime: 10_000,
     refetchInterval: 10_000,
+    placeholderData: keepPreviousData,
   });
 }
 

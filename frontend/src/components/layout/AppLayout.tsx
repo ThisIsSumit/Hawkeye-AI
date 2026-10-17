@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, AlertTriangle, Bell,
   Search, FileText, Settings, Shield,
@@ -8,6 +8,7 @@ import { StreamStatus } from '../ui/StreamStatus.tsx';
 import { useLiveStream } from '../../lib/StreamContext.tsx';
 import { useAuth }       from '../../lib/AuthContext.tsx';
 import { hasRole }       from '../../lib/auth.ts';
+import './AppLayout.css';
 
 const NAV = [
   { to: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard',     section: 'Monitor',      minRole: 'VIEWER'  as const },
@@ -22,25 +23,27 @@ const NAV = [
 const SECTIONS = ['Monitor', 'Investigate', 'Admin'];
 
 const ROLE_BADGE: Record<string, string> = {
-  ADMIN:   'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  ANALYST: 'bg-primary/20 text-primary border-primary/30',
+  ADMIN:   'bg-primary/20 text-primary border-primary/30',
+  ANALYST: 'bg-secondary/20 text-secondary border-secondary/30',
   VIEWER:  'bg-surface-high text-on-surface-variant border-outline-variant/30',
 };
 
 export function AppLayout() {
   const { newAlerts, liveEvents } = useLiveStream();
   const { user, logout }          = useAuth();
+  const location                  = useLocation();
   const criticalCount = liveEvents.filter(e => e.severity === 'critical').length;
 
   const visibleNav = NAV.filter(n => hasRole(user, n.minRole));
+  const currentNav = NAV.find(item => location.pathname.startsWith(item.to));
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-on-surface font-sans selection:bg-primary/20 selection:text-primary">
+    <div className="app-layout app-shell flex h-screen overflow-hidden bg-background text-on-surface font-sans selection:bg-primary/20 selection:text-primary">
 
       {/* Sidebar - Sovereign Command Deep Layer */}
-      <aside className="w-[220px] min-w-[220px] bg-surface-lowest flex flex-col h-screen border-r border-outline-variant/20 relative z-20">
-        <div className="flex items-center gap-2.5 px-5 py-5 border-b border-outline-variant/20">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-primary to-primary-container shadow-glow">
+      <aside className="app-layout__sidebar w-[220px] min-w-[220px] bg-surface-lowest flex flex-col h-screen border-r border-outline-variant/20 relative z-20">
+        <div className="app-layout__brand flex items-center gap-2.5 px-5 py-5 border-b border-outline-variant/20">
+          <div className="app-layout__brand-icon w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0">
             <Shield className="w-4 h-4 text-surface-lowest" />
           </div>
           <div>
@@ -60,7 +63,7 @@ export function AppLayout() {
                 </p>
                 {items.map(({ to, icon: Icon, label }) => (
                   <NavLink key={to} to={to} className={({ isActive }) =>
-                    `flex items-center gap-2.5 px-2.5 py-2 rounded object-cover text-[13px] mb-0.5 transition-all select-none border border-transparent ${
+                    `app-layout__nav-link flex items-center gap-2.5 px-2.5 py-2 rounded object-cover text-[13px] mb-0.5 transition-all select-none border border-transparent ${
                       isActive 
                         ? 'bg-primary/10 text-primary border-primary/20' 
                         : 'text-on-surface-variant hover:bg-surface-low hover:text-on-surface'
@@ -108,14 +111,21 @@ export function AppLayout() {
       </aside>
 
       {/* Main Workspace */}
-      <div className="flex-1 flex flex-col overflow-hidden relative">
+      <div className="app-layout__workspace flex-1 flex flex-col overflow-hidden relative">
         {/* Glow Effects in background */}
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none -z-10" />
         <div className="absolute bottom-1/4 right-0 w-96 h-96 bg-secondary/5 rounded-full blur-3xl pointer-events-none -z-10" />
 
         {/* Header - Glassmorphic */}
-        <header className="h-14 glass-header flex items-center px-6 gap-4 flex-shrink-0 z-10 relative">
-          <div className="flex-1 max-w-sm relative group">
+        <header className="app-layout__header h-14 glass-header flex items-center px-6 gap-4 flex-shrink-0 z-10 relative">
+          <div className="app-layout__context flex items-center gap-3 min-w-0">
+            <span className="app-layout__context-mark" />
+            <div className="min-w-0">
+              <p className="app-layout__context-kicker">Hawkeye / command center</p>
+              <p className="app-layout__context-title truncate">{currentNav?.label ?? 'Workspace'}</p>
+            </div>
+          </div>
+          <div className="app-layout__search flex-1 max-w-sm relative group">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-on-surface-variant group-focus-within:text-primary transition-colors" />
             <input type="text" placeholder="Search parameters, arrays, endpoints…"
               className="w-full pl-8 pr-3 py-1.5 text-[13px] bg-surface-lowest/50 border border-outline-variant/30 rounded font-mono text-on-surface outline-none focus:border-primary/50 focus:bg-surface-low transition-all focus:shadow-glow placeholder-on-surface-variant/50" />
@@ -134,7 +144,7 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6 z-10">
+        <main className="app-layout__main flex-1 overflow-y-auto p-6 z-10">
           <Outlet />
         </main>
       </div>

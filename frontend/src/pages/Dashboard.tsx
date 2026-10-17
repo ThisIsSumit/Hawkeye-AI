@@ -6,9 +6,10 @@ import {
 import { useAnalytics, useThreats } from '../hooks/useSecurityData.js';
 import { useLiveStream }            from '../lib/StreamContext.js';
 import { LiveFeed }                 from '../components/ui/LiveFeed.js';
-import { SeverityBadge, StatusBadge, Skeleton, SkeletonRow, Badge } from '../components/ui/Badge.js';
+import { SeverityBadge, StatusBadge, SkeletonRow } from '../components/ui/Badge.js';
 import { ThreatTrendsChart }        from '../components/charts/ThreatTrendsChart.js';
 import { AttackDistChart }          from '../components/charts/AttackDistChart.js';
+import './Dashboard.css';
 
 // ─── KPI card ─────────────────────────────────────────────────────────────────
 
@@ -19,18 +20,18 @@ function KpiCard({
   icon: React.ElementType; iconClass: string;
 }) {
   return (
-    <div className="glass-panel rounded-xl p-5 hover:bg-surface-high/30 transition-all flex flex-col justify-between group overflow-hidden relative">
+    <div className="dashboard-kpi glass-panel p-5 hover:bg-surface-high/30 transition-all flex flex-col justify-between group overflow-hidden relative">
       {/* Background glow hover effect */}
       <div className="absolute inset-x-0 -bottom-10 h-20 bg-gradient-to-t from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
       
       <div className="flex items-start justify-between mb-4 relative z-10">
-        <p className="text-[11px] font-bold font-display text-on-surface-variant uppercase tracking-[0.1em]">{label}</p>
+        <p className="dashboard-kpi__label">{label}</p>
         <div className={`w-8 h-8 rounded shrink-0 flex items-center justify-center border border-outline-variant/30 backdrop-blur-md ${iconClass}`}>
           <Icon className="w-4 h-4" />
         </div>
       </div>
       <div className="relative z-10">
-        <p className="text-3xl font-mono font-semibold tracking-tight text-on-surface">
+        <p className="dashboard-kpi__value">
           {typeof value === 'number' ? value.toLocaleString() : value}
         </p>
         <p className={`text-xs font-mono mt-2 flex items-center gap-1 ${subUp ? 'text-error' : 'text-secondary'}`}>
@@ -40,6 +41,14 @@ function KpiCard({
       </div>
     </div>
   );
+}
+
+function formatChange(change: number): { label: string; positive: boolean } {
+  if (change === 0) return { label: 'No change vs previous 24h', positive: false };
+  return {
+    label: `${change > 0 ? '+' : ''}${change} vs previous 24h`,
+    positive: change > 0,
+  };
 }
 
 // ─── Top IPs table ────────────────────────────────────────────────────────────
@@ -140,7 +149,7 @@ function RecentAlertsTable() {
 // ─── Dashboard page ───────────────────────────────────────────────────────────
 
 export function Dashboard() {
-  const { data: analytics, isLoading } = useAnalytics();
+  const { data: analytics } = useAnalytics();
   const { kpiDelta }                    = useLiveStream();
 
   // merge SSE delta over query data for real-time KPI numbers
@@ -148,49 +157,55 @@ export function Dashboard() {
   const activeThreats  = kpiDelta?.activeThreats  ?? analytics?.activeThreats  ?? 0;
   const criticalAlerts = kpiDelta?.criticalAlerts ?? analytics?.criticalAlerts ?? 0;
   const blockedIPs     = kpiDelta?.blockedIPs     ?? analytics?.blockedIPs     ?? 0;
+  const changes = analytics?.changes ?? {
+    totalEvents: 0,
+    activeThreats: 0,
+    criticalAlerts: 0,
+    blockedIPs: 0,
+  };
+  const totalEventsChange = formatChange(changes.totalEvents);
+  const activeThreatsChange = formatChange(changes.activeThreats);
+  const criticalAlertsChange = formatChange(changes.criticalAlerts);
+  const blockedIPsChange = formatChange(changes.blockedIPs);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-bold font-display text-on-surface tracking-tight">Terminal Command</h1>
-          <p className="text-on-surface-variant text-sm mt-1 font-mono uppercase tracking-wider text-[11px]">System Status: Nominal · Live Telemetry Enabled</p>
+    <div className="dashboard-page space-y-5">
+      <section className="dashboard-hero">
+        <div className="dashboard-hero__copy">
+          <p className="dashboard-hero__kicker">Operational overview / live telemetry</p>
+          <h1>See the signal.</h1>
+          <p className="dashboard-hero__sub">A focused read on the events that need an analyst next.</p>
         </div>
-        <Badge variant="success" className="animate-pulse shadow-glow-secondary">
-          <span className="w-1.5 h-1.5 rounded-full bg-secondary mr-2" />
-          Synchronized
-        </Badge>
-      </div>
+        <div className="dashboard-hero__status">
+          <span className="dashboard-hero__status-label">Command center</span>
+          <span className="dashboard-hero__status-value"><span /> Synchronized</span>
+        </div>
+      </section>
 
       {/* KPIs */}
-      {isLoading ? (
-        <div className="grid grid-cols-4 gap-4 md:gap-6">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)}
-        </div>
-      ) : (
-        <div className="grid grid-cols-4 gap-4 md:gap-6">
-          <KpiCard label="Total Events"    value={totalEvents}    sub="↑ 14.2% from yesterday" subUp={true}  icon={Activity}       iconClass="bg-primary/20 text-primary border-primary/30" />
-          <KpiCard label="Active Threats"  value={activeThreats}  sub="↑ 3 new in last hour"   subUp={true}  icon={AlertTriangle}  iconClass="bg-error/20 text-error border-error/30" />
-          <KpiCard label="Critical Alerts" value={criticalAlerts} sub="5 unresolved"            subUp={true}  icon={Shield}         iconClass="bg-tertiary/20 text-tertiary border-tertiary/30" />
-          <KpiCard label="Blocked IPs"     value={blockedIPs}     sub={`${analytics?.blockRate ?? 99.2}% block rate`} subUp={false} icon={Ban} iconClass="bg-secondary/20 text-secondary border-secondary/30" />
-        </div>
-      )}
+      <div className="dashboard-kpis">
+        <KpiCard label="Total Events" value={totalEvents} sub={totalEventsChange.label} subUp={totalEventsChange.positive} icon={Activity} iconClass="bg-primary/20 text-primary border-primary/30" />
+        <KpiCard label="Active Threats" value={activeThreats} sub={activeThreatsChange.label} subUp={activeThreatsChange.positive} icon={AlertTriangle} iconClass="bg-error/20 text-error border-error/30" />
+        <KpiCard label="Critical Alerts" value={criticalAlerts} sub={criticalAlertsChange.label} subUp={criticalAlertsChange.positive} icon={Shield} iconClass="bg-tertiary/20 text-tertiary border-tertiary/30" />
+        <KpiCard label="Blocked IPs" value={blockedIPs} sub={`${analytics?.blockRate ?? 0}% block rate · ${blockedIPsChange.label}`} subUp={blockedIPsChange.positive} icon={Ban} iconClass="bg-secondary/20 text-secondary border-secondary/30" />
+      </div>
 
       {/* Charts */}
       <div className="grid grid-cols-2 gap-4 md:gap-6">
-        <div className="glass-panel rounded-xl overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/30 bg-surface-lowest/40 backdrop-blur-sm">
-            <p className="text-xs font-bold font-display tracking-widest uppercase text-on-surface">Threat Vectors</p>
-            <Badge variant="info" className="shadow-[0_0_10px_rgba(165,200,255,0.15)]"><span className="w-1.5 h-1.5 rounded-full bg-primary mr-1 animate-pulse" /> Live</Badge>
+        <div className="dashboard-section glass-panel overflow-hidden flex flex-col">
+          <div className="dashboard-section__head bg-surface-lowest/40 backdrop-blur-sm">
+            <p className="dashboard-section__title">Threat vectors</p>
+            <span className="dashboard-section__meta">7 day signal</span>
           </div>
           <div className="p-5 flex-1 relative">
              {/* Chart styling needs to inherit dark mode config - ensure Chart.js applies dark text if configured */}
             {analytics && analytics.trendData && <ThreatTrendsChart data={analytics.trendData} />}
           </div>
         </div>
-        <div className="glass-panel rounded-xl overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/30 bg-surface-lowest/40 backdrop-blur-sm">
-            <p className="text-xs font-bold font-display tracking-widest uppercase text-on-surface">Vector Distribution</p>
+        <div className="dashboard-section glass-panel overflow-hidden flex flex-col">
+          <div className="dashboard-section__head bg-surface-lowest/40 backdrop-blur-sm">
+            <p className="dashboard-section__title">Vector distribution</p>
+            <span className="dashboard-section__meta">By attack type</span>
           </div>
           <div className="p-5 flex-1 relative">
             {analytics && analytics.attackDistribution && <AttackDistChart data={analytics.attackDistribution} />}
@@ -200,16 +215,16 @@ export function Dashboard() {
 
       {/* Top IPs + Live Feed */}
       <div className="grid grid-cols-[1fr_360px] gap-4 md:gap-6">
-        <div className="glass-panel rounded-xl overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/30 bg-surface-lowest/40 backdrop-blur-sm">
-            <p className="text-xs font-bold font-display tracking-widest uppercase text-on-surface">Hostile Entities</p>
-            <Badge variant="danger" className="shadow-glow-error">Priority Targets</Badge>
+        <div className="dashboard-section glass-panel overflow-hidden">
+          <div className="dashboard-section__head bg-surface-lowest/40 backdrop-blur-sm">
+            <p className="dashboard-section__title">Hostile entities</p>
+            <span className="dashboard-section__meta">Top source IPs</span>
           </div>
           <TopIPsTable />
         </div>
-        <div className="glass-panel rounded-xl overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/30 bg-surface-lowest/40 backdrop-blur-sm">
-            <p className="text-xs font-bold font-display tracking-widest uppercase text-on-surface">Event Stream</p>
+        <div className="dashboard-section glass-panel overflow-hidden flex flex-col">
+          <div className="dashboard-section__head bg-surface-lowest/40 backdrop-blur-sm">
+            <p className="dashboard-section__title">Event stream</p>
             <span className="flex items-center gap-1.5 text-[9px] font-bold font-mono text-error uppercase tracking-[0.2em]">
               <span className="w-1.5 h-1.5 rounded-full bg-error shadow-[0_0_8px_#ffb4ab] animate-pulse" />
               Live
@@ -222,9 +237,9 @@ export function Dashboard() {
       </div>
 
       {/* Recent Alerts */}
-      <div className="glass-panel rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/30 bg-surface-lowest/40 backdrop-blur-sm">
-          <p className="text-xs font-bold font-display tracking-widest uppercase text-on-surface">System Alerts</p>
+      <div className="dashboard-section glass-panel overflow-hidden">
+        <div className="dashboard-section__head bg-surface-lowest/40 backdrop-blur-sm">
+          <p className="dashboard-section__title">System alerts</p>
           <button
             onClick={() => window.location.href = '/alerts'}
             className="text-[11px] font-mono uppercase tracking-widest text-primary hover:text-primary-container font-semibold transition-colors flex items-center gap-1"

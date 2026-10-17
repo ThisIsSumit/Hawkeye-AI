@@ -13,10 +13,10 @@
     "test:ingest": "vitest run tests/threatParser.unit.test.ts tests/ingest.integration.test.ts",
     "ingest:replay": "tsx scripts/replayDummyLogs.ts",
     "db:generate": "prisma generate --config prisma.config.ts",
-    "db:push": "prisma db push --config prisma.config.ts || npm run db:push:docker",
-    "db:push:docker": "docker run --rm --network backend_default -v \"%cd%\":/app -w /tmp node:22-bookworm sh -lc \"npx --yes prisma db push --schema /app/prisma/schema.prisma --url postgresql://hawkeye:hawkeye_password@postgres:5432/hawkeye_db\"",
+    "db:push": "prisma db push --config prisma.config.ts",
     "db:migrate": "prisma migrate dev --config prisma.config.ts",
     "db:studio": "prisma studio --config prisma.config.ts",
+    "db:seed:demo": "tsx scripts/seedDemoUsers.ts",
     "worker": "tsx src/workers/alertWorker.ts"
   },
   "dependencies": {

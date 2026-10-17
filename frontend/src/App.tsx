@@ -13,6 +13,7 @@ import { Investigation }         from './pages/Investigation.tsx';
 import { RAGQuery }              from './pages/RAGQuery.tsx';
 import { Reports }               from './pages/Reports.tsx';
 import { Settings }              from './pages/Settings.tsx';
+import { Docs }                  from './pages/Docs.tsx';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -50,6 +51,7 @@ export default function App() {
             {/* Public */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/docs" element={<Docs />} />
 
             {/* Protected */}
             <Route element={
@@ -77,5 +79,3 @@ export default function App() {
     </QueryClientProvider>
   );
 }
-
-

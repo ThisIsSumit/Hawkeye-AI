@@ -4,7 +4,13 @@ import type {
   Threat, Alert, AnalyticsSummary, Report, AIAnalysis,
 } from '../types/index.ts';
 
-const BASE = import.meta.env.VITE_API_URL ?? '/api';
+function normalizeApiBase(value: unknown): string {
+  const configured = typeof value === 'string' ? value.trim().replace(/\/+$/, '') : '';
+  if (!configured) return '/api';
+  return configured.endsWith('/api') ? configured : `${configured}/api`;
+}
+
+const BASE = normalizeApiBase(import.meta.env.VITE_API_URL);
 
 // ─── Fetch with auth header ───────────────────────────────────────────────────
 

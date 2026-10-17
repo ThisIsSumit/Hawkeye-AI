@@ -2,14 +2,14 @@ version: '3.9'
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
       POSTGRES_DB: hawkeye
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -30,6 +30,7 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_SECRET: change-me-production-secret
       CLIENT_URL: http://localhost
+      ENABLE_DEMO_USERS: "true"
       INGEST_API_TOKEN: change-me-ingest-token
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       VOYAGE_API_KEY: ${VOYAGE_API_KEY}

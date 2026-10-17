@@ -51,6 +51,12 @@ export interface AnalyticsSummary {
   criticalAlerts: number;
   blockedIPs: number;
   blockRate: number;
+  changes: {
+    totalEvents: number;
+    activeThreats: number;
+    criticalAlerts: number;
+    blockedIPs: number;
+  };
   trendData: TrendPoint[];
   attackDistribution: AttackDistPoint[];
   topAttackingIPs: TopIP[];

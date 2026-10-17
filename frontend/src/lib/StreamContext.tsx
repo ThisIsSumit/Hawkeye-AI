@@ -92,8 +92,7 @@ export function StreamProvider({ children }: { children: ReactNode }) {
 
   const onAnalyticsDelta = useCallback((delta: AnalyticsDeltaPayload) => {
     dispatch({ type: 'ANALYTICS_DELTA', payload: delta });
-    qc.invalidateQueries({ queryKey: QK.analytics });
-  }, [qc]);
+  }, []);
 
   const { status, clientCount, lastEventAt, reconnect } = useStream({
     onThreatNew,

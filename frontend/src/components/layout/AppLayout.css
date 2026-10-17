@@ -1,0 +1,123 @@
+.app-layout__sidebar {
+  box-shadow: 18px 0 60px rgba(0, 0, 0, .18);
+}
+
+.app-layout__brand {
+  letter-spacing: -.02em;
+}
+
+.app-layout__brand-icon {
+  color: #10150f;
+  background: #c8f36a;
+  box-shadow: 0 0 24px rgba(200, 243, 106, .2);
+}
+
+.app-layout__nav-link {
+  position: relative;
+}
+
+.app-layout__nav-link[aria-current='page']::before {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: -1px;
+  width: 2px;
+  content: '';
+  background: #c8f36a;
+  box-shadow: 0 0 10px rgba(200, 243, 106, .7);
+}
+
+.app-layout__context {
+  min-width: 180px;
+}
+
+.app-layout__context-mark {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #c8f36a;
+  box-shadow: 0 0 10px rgba(200, 243, 106, .8);
+}
+
+.app-layout__context-kicker {
+  color: #5d6e6b;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 8px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.app-layout__context-title {
+  color: #edf1ed;
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  letter-spacing: -.02em;
+}
+
+@media (max-width: 900px) {
+  .app-layout__sidebar {
+    width: 190px;
+    min-width: 190px;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-layout {
+    display: block;
+    overflow: auto;
+  }
+
+  .app-layout__sidebar {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+  }
+
+  .app-layout__sidebar nav {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    padding: 8px 12px;
+  }
+
+  .app-layout__sidebar nav > div {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+  }
+
+  .app-layout__sidebar nav > div > p {
+    display: none;
+  }
+
+  .app-layout__sidebar nav a {
+    white-space: nowrap;
+  }
+
+  .app-layout__sidebar > div:last-child {
+    display: none;
+  }
+
+  .app-layout__workspace {
+    min-height: calc(100svh - 112px);
+  }
+
+  .app-layout__header {
+    padding: 0 16px;
+  }
+
+  .app-layout__header > div:first-child {
+    max-width: none;
+  }
+
+  .app-layout__context {
+    display: none;
+  }
+
+  .app-layout__main {
+    padding: 20px 16px;
+  }
+}

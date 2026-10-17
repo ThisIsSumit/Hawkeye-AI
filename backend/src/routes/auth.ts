@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from 'express';
-import { findUserByEmail, verifyPassword, signToken, getAllUsers, requireAuth, requireRole, normalizeEmail, hashPassword, createUser } from '../lib/auth.js';
+import { findUserByEmail, verifyPassword, signToken, getAllUsers, requireAuth, requireRole, normalizeEmail, hashPassword, createUser, isDatabaseAvailable } from '../lib/auth.js';
 
 export const authRouter = Router();
 
@@ -10,6 +10,11 @@ authRouter.post('/register', async (req: Request, res: Response) => {
 
   if (!email || !password || !name) {
     res.status(400).json({ success: false, error: 'name, email and password required', code: 'VALIDATION_ERROR' });
+    return;
+  }
+
+  if (!isDatabaseAvailable()) {
+    res.status(503).json({ success: false, error: 'Authentication database unavailable', code: 'AUTH_DATABASE_UNAVAILABLE' });
     return;
   }
 
@@ -41,6 +46,11 @@ authRouter.post('/login', async (req: Request, res: Response) => {
 
   if (!email || !password) {
     res.status(400).json({ success: false, error: 'email and password required', code: 'VALIDATION_ERROR' });
+    return;
+  }
+
+  if (!isDatabaseAvailable()) {
+    res.status(503).json({ success: false, error: 'Authentication database unavailable', code: 'AUTH_DATABASE_UNAVAILABLE' });
     return;
   }
 
